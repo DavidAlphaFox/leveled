@@ -6,7 +6,7 @@
 %% multiple lists).  The list is built first, then the view is created in bulk.
 %%
 %% -------- Slots ---------
-%%
+%% 每一个槽可以保存128个键和值
 %% The view is built from sublists referred to as slot.  Each slot is up to 128
 %% keys and values in size.  Three strategies have been benchmarked for the 
 %% slot: a skiplist, a gb-tree, four blocks of flat lists with an index. 
@@ -473,8 +473,8 @@ init([]) ->
     {ok, starting, #state{}}.
 
 starting({sst_open, RootPath, Filename}, _From, State) ->
-    {UpdState, Bloom} = 
-        read_file(Filename, State#state{root_path=RootPath}),
+    {UpdState, Bloom} = %% 读取文件
+        read_file(Filename, State#state{root_path=RootPath}), 
     Summary = UpdState#state.summary,
     {reply,
         {ok, {Summary#summary.first_key, Summary#summary.last_key}, Bloom},
@@ -894,9 +894,9 @@ write_file(RootPath, Filename, SummaryBin, SlotsBin, PressMethod) ->
     FinalName.
 
 read_file(Filename, State) ->
-    {Handle, FileVersion, SummaryBin} = 
+    {Handle, FileVersion, SummaryBin} = %% 打开文件
         open_reader(filename:join(State#state.root_path, Filename)),
-    UpdState0 = imp_fileversion(FileVersion, State),
+    UpdState0 = imp_fileversion(FileVersion, State), %% 是否需要升级
     {Summary, Bloom, SlotList} = read_table_summary(SummaryBin),
     BlockIndexCache = array:new([{size, Summary#summary.size},
                                     {default, none}]),
@@ -934,12 +934,12 @@ imp_fileversion(VersionInt, State) ->
     UpdState.
 
 open_reader(Filename) ->
-    {ok, Handle} = file:open(Filename, [binary, raw, read]),
-    {ok, Lengths} = file:pread(Handle, 0, 9),
-    <<FileVersion:8/integer, 
-        SlotsLength:32/integer, 
+    {ok, Handle} = file:open(Filename, [binary, raw, read]),%% 读方式打开
+    {ok, Lengths} = file:pread(Handle, 0, 9), %% 得到文件头
+    <<FileVersion:8/integer, %% 文件版本
+        SlotsLength:32/integer, %% 槽长度
         SummaryLength:32/integer>> = Lengths,
-    {ok, SummaryBin} = file:pread(Handle, SlotsLength + 9, SummaryLength),
+    {ok, SummaryBin} = file:pread(Handle, SlotsLength + 9, SummaryLength),%% 得到摘要
     {Handle, FileVersion, SummaryBin}.
 
 build_table_summary(SlotIndex, _Level, FirstKey, SlotCount, MaxSQN, Bloom) ->
